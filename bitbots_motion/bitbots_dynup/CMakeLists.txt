@@ -115,8 +115,10 @@ rclcpp_components_register_node(DynupNode_component PLUGIN
                                 "bitbots_dynup::DynupNode" EXECUTABLE DynupNode)
 
 # install(TARGETS DynupNode DESTINATION lib/${PROJECT_NAME})
+ament_export_targets(export_DynupNode_component)
 install(
   TARGETS DynupNode_component
+  EXPORT export_DynupNode_component
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)
