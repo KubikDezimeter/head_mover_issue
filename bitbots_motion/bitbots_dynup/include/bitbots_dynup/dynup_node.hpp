@@ -51,7 +51,8 @@ using namespace std::placeholders;
  */
 class DynupNode : public rclcpp::Node {
  public:
-  explicit DynupNode(const std::string &ns = "", std::vector<rclcpp::Parameter> parameters = {});
+  explicit DynupNode(const rclcpp::NodeOptions &options = rclcpp::NodeOptions(),
+                     const std::string &ns = "" /*, std::vector<rclcpp::Parameter> parameters = {}*/);
 
   rcl_interfaces::msg::SetParametersResult onSetParameters(const std::vector<rclcpp::Parameter> &parameters);
 

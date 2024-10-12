@@ -19,6 +19,7 @@ find_package(control_toolbox REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(rot_conv REQUIRED)
 find_package(sensor_msgs REQUIRED)
@@ -45,10 +46,12 @@ add_compile_options(-Wall -Werror -Wno-unused -fPIC)
 set(SOURCES src/dynup_engine.cpp src/dynup_ik.cpp src/dynup_node.cpp
             src/dynup_pywrapper.cpp src/dynup_stabilizer.cpp src/visualizer.cpp)
 
-add_executable(DynupNode ${SOURCES})
+# add_executable(DynupNode ${SOURCES})
+add_library(DynupNode_component SHARED ${SOURCES})
 
 ament_target_dependencies(
-  DynupNode
+  # DynupNode
+  DynupNode_component
   ament_cmake
   bitbots_msgs
   bitbots_splines
@@ -58,6 +61,7 @@ ament_target_dependencies(
   geometry_msgs
   moveit_ros_planning_interface
   rclcpp
+  rclcpp_components
   ros2_python_extension
   rot_conv
   sensor_msgs
@@ -71,7 +75,8 @@ ament_target_dependencies(
 rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME}
                               "rosidl_typesupport_cpp")
 
-target_link_libraries(DynupNode "${cpp_typesupport_target}")
+# target_link_libraries(DynupNode "${cpp_typesupport_target}")
+target_link_libraries(DynupNode_component "${cpp_typesupport_target}")
 
 # create the lib
 pybind11_add_module(libpy_dynup SHARED src/dynup_pywrapper.cpp ${SOURCES})
@@ -87,6 +92,7 @@ ament_target_dependencies(
   geometry_msgs
   moveit_ros_planning_interface
   rclcpp
+  rclcpp_components
   ros2_python_extension
   rot_conv
   sensor_msgs
@@ -105,8 +111,15 @@ install(TARGETS libpy_dynup
 
 enable_bitbots_docs()
 
-install(TARGETS DynupNode DESTINATION lib/${PROJECT_NAME})
+rclcpp_components_register_node(DynupNode_component PLUGIN
+                                "bitbots_dynup::DynupNode" EXECUTABLE DynupNode)
 
+# install(TARGETS DynupNode DESTINATION lib/${PROJECT_NAME})
+install(
+  TARGETS DynupNode_component
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin)
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 
 install(DIRECTORY config DESTINATION share/${PROJECT_NAME})

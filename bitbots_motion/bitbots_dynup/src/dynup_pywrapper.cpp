@@ -6,7 +6,7 @@ PyDynupWrapper::PyDynupWrapper(const std::string ns) {
     rclcpp::init(0, nullptr);
   }
 
-  dynup_node_ = std::make_shared<bitbots_dynup::DynupNode>(ns);
+  dynup_node_ = std::make_shared<bitbots_dynup::DynupNode>(rclcpp::NodeOptions(), ns);
 }
 
 void PyDynupWrapper::spin_some() { rclcpp::spin_some(dynup_node_); }

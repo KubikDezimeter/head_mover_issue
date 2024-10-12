@@ -3,10 +3,10 @@
 namespace bitbots_dynup {
 using namespace std::chrono_literals;
 
-DynupNode::DynupNode(const std::string &ns, std::vector<rclcpp::Parameter> parameters)
-    : Node(ns + "dynup", rclcpp::NodeOptions()
+DynupNode::DynupNode(const rclcpp::NodeOptions &options, const std::string &ns)
+    : Node(ns + "dynup", rclcpp::NodeOptions(options)
                              .allow_undeclared_parameters(true)
-                             .parameter_overrides(parameters)
+                             //  .parameter_overrides(parameters)
                              .automatically_declare_parameters_from_overrides(true)),
       engine_(SharedPtr(this)),
       stabilizer_(ns),
@@ -405,13 +405,16 @@ DynupIK *DynupNode::getIK() { return &ik_; }
 
 }  // namespace bitbots_dynup
 
-int main(int argc, char **argv) {
-  rclcpp::init(argc, argv);
-  // init node
-  auto node = std::make_shared<bitbots_dynup::DynupNode>();
-  rclcpp::experimental::executors::EventsExecutor exec;
-  exec.add_node(node);
+// int main(int argc, char **argv) {
+//   rclcpp::init(argc, argv);
+//   // init node
+//   auto node = std::make_shared<bitbots_dynup::DynupNode>();
+//   rclcpp::experimental::executors::EventsExecutor exec;
+//   exec.add_node(node);
 
-  exec.spin();
-  rclcpp::shutdown();
-}
+//   exec.spin();
+//   rclcpp::shutdown();
+// }
+
+#include <rclcpp_components/register_node_macro.hpp>
+RCLCPP_COMPONENTS_REGISTER_NODE(bitbots_dynup::DynupNode)
