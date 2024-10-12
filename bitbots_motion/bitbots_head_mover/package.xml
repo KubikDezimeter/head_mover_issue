@@ -28,6 +28,7 @@
   <depend>moveit_ros_planning</depend>
   <depend>moveit_ros</depend>
   <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
   <depend>tf2_geometry_msgs</depend>

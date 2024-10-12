@@ -18,6 +18,7 @@ find_package(moveit_msgs REQUIRED)
 find_package(moveit_ros_planning REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
@@ -31,11 +32,12 @@ generate_parameter_library(
   head_parameters # cmake target name for the parameter library
   config/head_config.yml)
 
-add_executable(move_head src/move_head.cpp)
-target_link_libraries(move_head rclcpp::rclcpp head_parameters)
+# add_executable(move_head src/move_head.cpp)
+add_library(move_head_component SHARED src/move_head.cpp)
+target_link_libraries(move_head_component rclcpp::rclcpp head_parameters)
 
 ament_target_dependencies(
-  move_head
+  move_head_component
   backward_ros
   bio_ik
   bio_ik_msgs
@@ -46,14 +48,24 @@ ament_target_dependencies(
   moveit_ros_planning
   moveit_ros_planning_interface
   rclcpp
+  rclcpp_components
   sensor_msgs
   std_msgs
   tf2_geometry_msgs
   tf2_kdl
   tf2_ros)
 
-install(TARGETS move_head DESTINATION lib/${PROJECT_NAME})
+rclcpp_components_register_node(move_head_component PLUGIN
+                                "move_head::HeadMover" EXECUTABLE move_head)
 
+# install(TARGETS move_head DESTINATION lib/${PROJECT_NAME})
+ament_export_targets(export_all_targets)
+install(
+  TARGETS move_head_component head_parameters
+  EXPORT export_all_targets
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin)
 install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
 
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})

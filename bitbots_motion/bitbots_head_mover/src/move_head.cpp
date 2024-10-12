@@ -91,7 +91,8 @@ class HeadMover {
   bool action_running_ = false;
 
  public:
-  HeadMover() : node_(std::make_shared<rclcpp::Node>("head_mover")) {
+  HeadMover(rclcpp::NodeOptions options = rclcpp::NodeOptions())
+      : node_(std::make_shared<rclcpp::Node>("head_mover", options)) {
     // Initialize publisher for head motor goals
     position_publisher_ = node_->create_publisher<bitbots_msgs::msg::JointCommand>("head_motor_goals", 10);
 
@@ -785,16 +786,26 @@ class HeadMover {
    * @brief A getter that returns the node
    */
   std::shared_ptr<rclcpp::Node> get_node() { return node_; }
+
+  /**
+   * @brief A getter that returns the NodeBaseInterface for composition
+   */
+  rclcpp::node_interfaces::NodeBaseInterface::SharedPtr get_node_base_interface() const {
+    return this->node_->get_node_base_interface();
+  }
 };
 }  // namespace move_head
 
-int main(int argc, char* argv[]) {
-  rclcpp::init(argc, argv);
-  rclcpp::experimental::executors::EventsExecutor exec;
-  auto head_mover = std::make_shared<move_head::HeadMover>();
-  exec.add_node(head_mover->get_node());
-  exec.spin();
-  rclcpp::shutdown();
+// int main(int argc, char* argv[]) {
+//   rclcpp::init(argc, argv);
+//   rclcpp::experimental::executors::EventsExecutor exec;
+//   auto head_mover = std::make_shared<move_head::HeadMover>();
+//   exec.add_node(head_mover->get_node());
+//   exec.spin();
+//   rclcpp::shutdown();
 
-  return 0;
-}
+//   return 0;
+// }
+
+#include <rclcpp_components/register_node_macro.hpp>
+RCLCPP_COMPONENTS_REGISTER_NODE(move_head::HeadMover)
