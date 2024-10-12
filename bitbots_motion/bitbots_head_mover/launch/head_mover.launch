@@ -1,10 +1,24 @@
 <launch>
     <arg name="tf_prefix" default=""/>
     <arg name="sim" default="false" />
+    <arg name="container" default="false" />
 
     <let unless="$(env IS_ROBOT false)" name="taskset" value=""/>
 
-    <node pkg="bitbots_head_mover" exec="move_head" output="screen" respawn="true">
-        <param name="use_sim_time" value="$(var sim)" />
-    </node>
+    <group unless="$(var container)">
+        <node pkg="bitbots_head_mover" exec="move_head" output="screen" respawn="true">
+            <param name="use_sim_time" value="$(var sim)" />
+        </node>
+    </group>
+
+    <group if="$(var container)">
+        <node pkg="rclcpp_components" exec="component_container" output="screen" launch-prefix="$(var taskset)" ros_args="-r ComponentManager:__node:=headmover_container">
+        </node>
+        <load_composable_node target="headmover_container">
+            <composable_node pkg="bitbots_head_mover" plugin="move_head::HeadMover" name="head_mover" namespace="">
+                <param name="use_sim_time" value="$(var sim)" />
+                <extra_arg name="use_intra_process_comms" value="true" />
+            </composable_node>
+        </load_composable_node>
+    </group>
 </launch>
