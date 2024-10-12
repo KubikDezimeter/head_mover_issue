@@ -53,7 +53,8 @@ namespace bitbots_quintic_walk {
 
 class WalkNode : public rclcpp::Node {
  public:
-  explicit WalkNode(std::string ns = "", std::vector<rclcpp::Parameter> parameters = {});
+  explicit WalkNode(const rclcpp::NodeOptions &options = rclcpp::NodeOptions(), std::string ns = "",
+                    std::vector<rclcpp::Parameter> parameters = {});
   bitbots_msgs::msg::JointCommand step(double dt);
   bitbots_msgs::msg::JointCommand step(double dt, geometry_msgs::msg::Twist::SharedPtr cmdvel_msg,
                                        sensor_msgs::msg::Imu::SharedPtr imu_msg,
@@ -177,6 +178,8 @@ class WalkNode : public rclcpp::Node {
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
   rclcpp::Subscription<bitbots_msgs::msg::FootPressure>::SharedPtr pressure_sub_left_;
   rclcpp::Subscription<bitbots_msgs::msg::FootPressure>::SharedPtr pressure_sub_right_;
+
+  rclcpp::TimerBase::SharedPtr timer_;
 
   // MoveIt!
   std::shared_ptr<robot_model_loader::RobotModelLoader> robot_model_loader_;

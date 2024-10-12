@@ -1,19 +1,44 @@
 <launch>
   <arg name="tf_prefix" default=""/>
   <arg name="sim" default="false"/>
+  <arg name="container" default="false"/>
   <arg name="wolfgang" default="false"/>
 
   <let if="$(env IS_ROBOT false)" name="taskset" value="taskset -c 3,4"/>
   <let unless="$(env IS_ROBOT false)" name="taskset" value=""/>
 
   <group if="$(var sim)">
-    <node pkg="bitbots_quintic_walk" exec="WalkNode" output="screen" launch-prefix="$(var taskset)">
-      <param from="$(find-pkg-share bitbots_quintic_walk)/config/walking_wolfgang_simulator.yaml" />
-    </node>
+    <group unless="$(var container)">
+      <node pkg="bitbots_quintic_walk" exec="WalkNode" output="screen" launch-prefix="$(var taskset)">
+        <param from="$(find-pkg-share bitbots_quintic_walk)/config/walking_wolfgang_simulator.yaml" />
+      </node>
+    </group>
+    <group if="$(var container)">
+      <node pkg="rclcpp_components" exec="component_container" output="screen" ros_args="-r ComponentManager:__node:=walk_container">
+      </node>
+      <load_composable_node target="walk_container">
+        <composable_node pkg="bitbots_quintic_walk" plugin="bitbots_quintic_walk::WalkNode" name="walking" namespace="">
+          <param from="$(find-pkg-share bitbots_quintic_walk)/config/walking_wolfgang_simulator.yaml" />
+          <extra_arg name="use_intra_process_comms" value="true" />
+        </composable_node>
+      </load_composable_node>
+    </group>
   </group>
   <group unless="$(var sim)">
-    <node pkg="bitbots_quintic_walk" exec="WalkNode" output="screen" launch-prefix="$(var taskset)">
-      <param from="$(find-pkg-share bitbots_quintic_walk)/config/walking_wolfgang_robot.yaml" />
-    </node>
+    <group unless="$(var container)">
+      <node pkg="bitbots_quintic_walk" exec="WalkNode" output="screen" launch-prefix="$(var taskset)">
+        <param from="$(find-pkg-share bitbots_quintic_walk)/config/walking_wolfgang_robot.yaml" />
+      </node>
+    </group>
+    <group if="$(var container)">
+      <node pkg="rclcpp_components" exec="component_container" output="screen" ros_args="-r ComponentManager:__node:=walk_container">
+      </node>
+      <load_composable_node target="walk_container">
+        <composable_node pkg="bitbots_quintic_walk" plugin="bitbots_quintic_walk::WalkNode" name="walking" namespace="">
+          <param from="$(find-pkg-share bitbots_quintic_walk)/config/walking_wolfgang_robot.yaml" />
+          <extra_arg name="use_intra_process_comms" value="true" />
+        </composable_node>
+      </load_composable_node>
+    </group>
   </group>
 </launch>

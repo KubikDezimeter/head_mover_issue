@@ -38,6 +38,7 @@
     <depend>moveit_ros_planning_interface</depend>
     <depend>moveit_ros_robot_interaction</depend>
     <depend>rclcpp</depend>
+    <depend>rclcpp_components</depend>
     <depend>ros2_python_extension</depend>
     <depend>rot_conv</depend>
     <depend>std_msgs</depend>

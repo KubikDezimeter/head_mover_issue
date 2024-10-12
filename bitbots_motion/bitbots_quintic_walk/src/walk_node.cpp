@@ -9,8 +9,8 @@ using namespace std::chrono_literals;
 
 namespace bitbots_quintic_walk {
 
-WalkNode::WalkNode(const std::string ns, std::vector<rclcpp::Parameter> parameters)
-    : Node(ns + "walking", rclcpp::NodeOptions()),
+WalkNode::WalkNode(const rclcpp::NodeOptions &options, const std::string ns, std::vector<rclcpp::Parameter> parameters)
+    : Node(ns + "walking", options),
       param_listener_(get_node_parameters_interface()),
       config_(param_listener_.get_params()),
       walk_engine_(SharedPtr(this)),
@@ -121,6 +121,11 @@ WalkNode::WalkNode(const std::string ns, std::vector<rclcpp::Parameter> paramete
   sup_state.phase = biped_interfaces::msg::Phase::LEFT_STANCE;
   sup_state.header.stamp = this->get_clock()->now();
   pub_support_->publish(sup_state);
+
+  initializeEngine();
+
+  rclcpp::Duration timer_duration = rclcpp::Duration::from_seconds(1.0 / this->getTimerFreq());
+  timer_ = rclcpp::create_timer(this, this->get_clock(), timer_duration, std::bind(&WalkNode::run, this));
 }
 
 void WalkNode::run() {
@@ -584,17 +589,20 @@ double WalkNode::getTimerFreq() { return config_.node.engine_freq; }
 
 }  // namespace bitbots_quintic_walk
 
-int main(int argc, char **argv) {
-  rclcpp::init(argc, argv);
-  // init node
-  auto node = std::make_shared<bitbots_quintic_walk::WalkNode>();
-  node->initializeEngine();
-  rclcpp::Duration timer_duration = rclcpp::Duration::from_seconds(1.0 / node->getTimerFreq());
-  rclcpp::TimerBase::SharedPtr timer =
-      rclcpp::create_timer(node, node->get_clock(), timer_duration, [node]() -> void { node->run(); });
-  rclcpp::experimental::executors::EventsExecutor exec;
-  exec.add_node(node);
+// int main(int argc, char **argv) {
+//   rclcpp::init(argc, argv);
+//   // init node
+//   auto node = std::make_shared<bitbots_quintic_walk::WalkNode>();
+//   // node->initializeEngine();
+//   // rclcpp::Duration timer_duration = rclcpp::Duration::from_seconds(1.0 / node->getTimerFreq());
+//   // rclcpp::TimerBase::SharedPtr timer =
+//   //     rclcpp::create_timer(node, node->get_clock(), timer_duration, [node]() -> void { node->run(); });
+//   rclcpp::experimental::executors::EventsExecutor exec;
+//   exec.add_node(node);
 
-  exec.spin();
-  rclcpp::shutdown();
-}
+//   exec.spin();
+//   rclcpp::shutdown();
+// }
+
+#include <rclcpp_components/register_node_macro.hpp>
+RCLCPP_COMPONENTS_REGISTER_NODE(bitbots_quintic_walk::WalkNode)

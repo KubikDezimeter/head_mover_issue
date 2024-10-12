@@ -20,6 +20,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(rot_conv REQUIRED)
 find_package(sensor_msgs REQUIRED)
@@ -51,10 +52,12 @@ add_compile_options(-Wall -Werror -Wno-unused)
 set(SOURCES src/walk_visualizer.cpp src/walk_engine.cpp src/walk_stabilizer.cpp
             src/walk_ik.cpp src/walk_node.cpp)
 
-add_executable(WalkNode ${SOURCES})
+# add_executable(WalkNode ${SOURCES})
+add_library(WalkNode_component SHARED ${SOURCES})
 
 ament_target_dependencies(
-  WalkNode
+  # WalkNode
+  WalkNode_component
   ament_cmake
   backward_ros
   biped_interfaces
@@ -66,6 +69,7 @@ ament_target_dependencies(
   moveit_ros_planning_interface
   nav_msgs
   rclcpp
+  rclcpp_components
   rot_conv
   sensor_msgs
   std_msgs
@@ -77,7 +81,9 @@ ament_target_dependencies(
 rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME}
                               "rosidl_typesupport_cpp")
 
-target_link_libraries(WalkNode "${cpp_typesupport_target}"
+# target_link_libraries(WalkNode "${cpp_typesupport_target}"
+# bitbots_quintic_walk_parameters)
+target_link_libraries(WalkNode_component "${cpp_typesupport_target}"
                       bitbots_quintic_walk_parameters)
 
 # create the lib
@@ -95,6 +101,7 @@ ament_target_dependencies(
   moveit_ros_planning_interface
   nav_msgs
   rclcpp
+  rclcpp_components
   ros2_python_extension
   rot_conv
   sensor_msgs
@@ -115,7 +122,18 @@ install(TARGETS libpy_quintic_walk
 
 enable_bitbots_docs()
 
-install(TARGETS WalkNode DESTINATION lib/${PROJECT_NAME})
+rclcpp_components_register_node(
+  WalkNode_component PLUGIN "bitbots_quintic_walk::WalkNode" EXECUTABLE
+  WalkNode)
+
+# install(TARGETS WalkNode DESTINATION lib/${PROJECT_NAME})
+ament_export_targets(export_all_targets)
+install(
+  TARGETS WalkNode_component bitbots_quintic_walk_parameters
+  EXPORT export_all_targets
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin)
 
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 

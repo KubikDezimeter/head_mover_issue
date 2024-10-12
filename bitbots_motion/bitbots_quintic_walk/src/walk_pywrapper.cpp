@@ -14,7 +14,7 @@ PyWalkWrapper::PyWalkWrapper(std::string ns, std::vector<py::bytes> parameter_ms
     cpp_parameters.push_back(
         rclcpp::Parameter::from_parameter_msg(fromPython<rcl_interfaces::msg::Parameter>(parameter_msg)));
   }
-  walk_node_ = std::make_shared<bitbots_quintic_walk::WalkNode>(ns, cpp_parameters);
+  walk_node_ = std::make_shared<bitbots_quintic_walk::WalkNode>(rclcpp::NodeOptions(), ns, cpp_parameters);
   set_robot_state(0);
   walk_node_->initializeEngine();
   walk_node_->getEngine()->setForceSmoothStepTransition(force_smooth_step_transition);
