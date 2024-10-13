@@ -196,32 +196,10 @@ class HeadMover {
   rclcpp_action::GoalResponse handle_goal(const rclcpp_action::GoalUUID& uuid,
                                           std::shared_ptr<const LookAtGoal::Goal> goal) {
     // Avoid unused parameter warning
-    (void)uuid;
-    RCLCPP_DEBUG(node_->get_logger(), "Received goal request");
-
-    // Bring the goal point into the planning frame
-    geometry_msgs::msg::PointStamped new_point;
-    try {
-      new_point =
-          tf_buffer_->transform(goal->look_at_position, planning_scene_->getPlanningFrame(), tf2::durationFromSec(0.9));
-    } catch (tf2::TransformException& ex) {
-      RCLCPP_ERROR(node_->get_logger(), "Could not transform goal point: %s", ex.what());
-      return rclcpp_action::GoalResponse::REJECT;
-    }
-
-    // Get the motor goals that are needed to look at the point
-    std::pair<double, double> pan_tilt = get_motor_goals_from_point(new_point.point);
-
-    // Check whether the goal is in range pan and tilt wise
-    bool goal_not_in_range = check_head_collision(pan_tilt.first, pan_tilt.second);
-
-    // Check whether the action goal is valid and can be executed
-    if (action_running_ || goal_not_in_range ||
-        !(params_.max_pan[0] < pan_tilt.first && pan_tilt.first < params_.max_pan[1]) ||
-        !(params_.max_tilt[0] < pan_tilt.second && pan_tilt.second < params_.max_tilt[1])) {
-      return rclcpp_action::GoalResponse::REJECT;
-    }
-    return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+    (void)uuid, (void) goal;
+    RCLCPP_ERROR(node_->get_logger(), "LookAt goal is disabled because it loading the bio_ik library required"
+                                      "for the LookAtGoal is not working when the head mover is executed as a nodelet.");
+    return rclcpp_action::GoalResponse::REJECT;
   }
 
   /**
@@ -233,9 +211,6 @@ class HeadMover {
   rclcpp_action::CancelResponse handle_cancel(const std::shared_ptr<LookAtGoalHandle> goal_handle) {
     // Avoid unused parameter warning
     (void)goal_handle;
-    RCLCPP_INFO(node_->get_logger(), "Received request to cancel goal");
-    // Set the action_running_ flag to false, so that the action can be executed again
-    action_running_ = false;
     return rclcpp_action::CancelResponse::ACCEPT;
   }
 
@@ -245,58 +220,8 @@ class HeadMover {
    * @param goal_handle
    */
   void handle_accepted(const std::shared_ptr<LookAtGoalHandle> goal_handle) {
-    // Spawn a new thread that executes the look at action until we reach the goal
-    std::thread{std::bind(&HeadMover::execute_look_at, this, std::placeholders::_1), goal_handle}.detach();
-  }
-
-  /**
-   * @brief Executes the look at action that looks at a specific point in a given frame until the goal is reached or the
-   * action is canceled
-   *
-   * @param goal_handle
-   */
-  void execute_look_at(const std::shared_ptr<LookAtGoalHandle> goal_handle) {
-    // Yeah seems like we are executing the action
-    action_running_ = true;
-
-    RCLCPP_INFO(node_->get_logger(), "Executing goal");
-
-    // Get the goal from the goal handle
-    const auto goal = goal_handle->get_goal();
-
-    // Create feedback and result messages
-    auto feedback = std::make_shared<LookAtGoal::Feedback>();
-    // Flag that indicates whether the action was successful yet
-    bool success = false;
-    auto result = std::make_shared<LookAtGoal::Result>();
-
-    // Execute the action until we reach the goal or the action is canceled
-    while (!success && rclcpp::ok()) {
-      RCLCPP_INFO(node_->get_logger(), "Looking at point");
-
-      // Check if the action was canceled and if so, set the result accordingly
-      if (goal_handle->is_canceling()) {
-        goal_handle->canceled(result);
-        RCLCPP_INFO(node_->get_logger(), "Goal was canceled");
-        return;
-      }
-
-      // Look at the goal point
-      success = look_at(goal->look_at_position);
-
-      // Publish feedback to the client
-      goal_handle->publish_feedback(feedback);  // TODO: currently feedback is empty
-    }
-
-    // If we reach this point, the action was successful
-    if (rclcpp::ok()) {
-      result->success = true;
-      goal_handle->succeed(result);
-      RCLCPP_INFO(node_->get_logger(), "Goal succeeded");
-    }
-
-    // Set the action_running_ flag to false, so that the action can be executed again
-    action_running_ = false;
+    // Avoid unused parameter warning
+    (void)goal_handle;
   }
 
   /**
@@ -572,73 +497,6 @@ class HeadMover {
       }
     }
     return keyframes;
-  }
-
-  /**
-   * @brief Calculates the motor goals that are needed to look at a given point using the inverse kinematics
-   */
-  std::pair<double, double> get_motor_goals_from_point(geometry_msgs::msg::Point point) {
-    // Create a new IK options object
-    bio_ik::BioIKKinematicsQueryOptions ik_options;
-    ik_options.return_approximate_solution = true;
-    ik_options.replace = true;
-
-    // Create a new look at goal and set the target point as the position the camera link should look at
-    ik_options.goals.emplace_back(new bio_ik::LookAtGoal("camera", {1.0, 0.0, 0.0}, {point.x, point.y, point.z}));
-
-    // Get the joint model group for the head
-    auto joint_model_group = robot_model_->getJointModelGroup("Head");
-
-    // Try to calculate the inverse kinematics
-    double timeout_seconds = 1.0;
-    bool success = robot_state_->setFromIK(joint_model_group, EigenSTL::vector_Isometry3d(), std::vector<std::string>(),
-                                           timeout_seconds, moveit::core::GroupStateValidityCallbackFn(), ik_options);
-    robot_state_->update();
-
-    // Get the solution from the IK response
-    bio_ik_msgs::msg::IKResponse response;
-    moveit::core::robotStateToRobotStateMsg(*robot_state_, response.solution);
-    response.solution_fitness = ik_options.solution_fitness;
-    // Return the motor goals if the IK was successful
-    if (success) {
-      return {response.solution.joint_state.position[0], response.solution.joint_state.position[1]};
-    } else {
-      RCLCPP_ERROR_STREAM_THROTTLE(node_->get_logger(), *node_->get_clock(), 1000,
-                                   "BioIK failed with error code: " << response.error_code.val);
-      return {0.0, 0.0};
-    }
-  }
-
-  /**
-   * @brief Looks at a given point and returns true if the goal position was reached
-   */
-  bool look_at(geometry_msgs::msg::PointStamped point, double min_pan_delta = 0.02, double min_tilt_delta = 0.02) {
-    try {
-      // Transform the point into the planning frame
-      geometry_msgs::msg::PointStamped new_point =
-          tf_buffer_->transform(point, planning_scene_->getPlanningFrame(), tf2::durationFromSec(0.9));
-
-      // Get the motor goals that are needed to look at the point from the inverse kinematics
-      std::pair<double, double> pan_tilt = get_motor_goals_from_point(new_point.point);
-      // Get the current head position
-      std::pair<double, double> current_pan_tilt = get_head_position();
-
-      // Check if we reached the goal position
-      if (std::abs(pan_tilt.first - current_pan_tilt.first) > min_pan_delta ||
-          std::abs(pan_tilt.second - current_pan_tilt.second) > min_tilt_delta) {
-        // Send the motor goals to the head motors
-        send_motor_goals(pan_tilt.first, pan_tilt.second, true, params_.look_at.pan_speed, params_.look_at.tilt_speed);
-        // Return false as we did not reach the goal position yet
-        return false;
-      }
-      // Return true as we reached the goal position
-      return true;
-    } catch (tf2::TransformException& ex) {
-      // Report error message if we were not able to transform the point
-      RCLCPP_ERROR(node_->get_logger(), "Transform error: %s", ex.what());
-      // We obviously did not reach the goal position
-      return false;
-    }
   }
 
   /**
